@@ -1,3 +1,4 @@
+from itertools import product
 from google.protobuf import message
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,7 +6,6 @@ from matplotlib.animation import FuncAnimation
 import time
 import matplotlib.cm as cm
 from numpy.lib.shape_base import take_along_axis
-from tqdm.auto import tqdm
 from util.timer import timer
 from collections import OrderedDict
 
@@ -47,9 +47,15 @@ try:
 except Exception as e:
     print(e)
 
+def remapCmap(image,filter = None):
+    if filter:
+        return filter(image)
+    
+    return image
 
-def plotImage(count, cmaps=("hot",), title=None, **kwargs):
-    sideLength = int(np.ceil(np.sqrt(len(cmaps))))
+def plotImage(count, cmaps=("hot",), title=None,filters = (None,),windowTitle=None, **kwargs):
+    toPlot = list(product(cmaps,enumerate(filters)))
+    sideLength = int(np.ceil(np.sqrt(len(toPlot))))
     (height, width) = count.shape
     aspectRatio = width/height
     fig, axes = plt.subplots(sideLength, sideLength, figsize=(
@@ -59,14 +65,16 @@ def plotImage(count, cmaps=("hot",), title=None, **kwargs):
     for xi in range(sideLength):
         for yi in range(sideLength):
             index = yi*sideLength + xi
-            if index >= len(cmaps):
+            if index >= len(toPlot):
                 break
-            axes[yi, xi].imshow(count, cmap=cmaps[index])
-            axes[yi, xi].set_title(f'cmap="{cmaps[index]}"')
+            cmap,(n,filter) = toPlot[index]
+            axes[yi, xi].imshow(remapCmap(count,filter), cmap=cmap)
+            axes[yi, xi].set_title(f'"{cmap}", filter {n}')
+    if windowTitle:
+        fig.canvas.set_window_title(windowTitle)
     plt.show(**kwargs)
 
-
-def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=None, functions=None, **kwargs):
+def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=None, functions=None,filter = None,windowTitle= None, **kwargs):
     ml = list(backends.items())
     if functions:
         ml = [(key, backends[key]) for key in functions if key in backends]
@@ -87,6 +95,7 @@ def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=
                 break
             key, f = ml[index]
             image, t = timer(f, x, y, zoom, iterations, yRes, aspectRatio)
+            image = remapCmap(image,filter)
             if index == 0:
                 prevImage = image
                 prevKey = key
@@ -97,10 +106,12 @@ def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=
             prevKey = key
             axes[yi, xi].imshow(image, cmap=cmap)
             axes[yi, xi].set_title(f'{key}: {t:.3f}s{msg}')
+    if windowTitle:
+        fig.canvas.set_window_title(windowTitle)
     plt.show(**kwargs)
 
 
-def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), title=None, subtitle=None, backend=None, **kwargs):
+def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), title=None, subtitle=None, backend=None,filters = (None,),windowTitle = None, **kwargs):
     # kwargs for plt.show(**kwargs)
     if backend is None:
         backend = list(backends.keys())[0]
@@ -114,10 +125,10 @@ def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), 
         title = f"x:{x}, y:{y}, zoom:{zoom:.2f}, {iterations} iterations ({t:.3f}s)"
     if subtitle:
         title = title + "\n" + subtitle
-    plotImage(count, cmaps, title, **kwargs)
+    plotImage(count, cmaps, title,filters=filters,windowTitle=windowTitle, **kwargs)
 
 
-def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="afmhot", speed=0.1, fps=2, duration=5, backend=None):
+def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="afmhot", speed=0.1, fps=2, duration=5, backend=None,filter = None):
 
     if backend is None:
         backend = list(backends.keys())[0]
@@ -128,20 +139,25 @@ def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="a
         return
     fig = plt.figure(figsize=(int(aspectRatio*10), 10))
     plt.tight_layout()
+    plt.axis("off")
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     dt = 1/fps * 1000  # in ms
 
     count = backends[backend](x, y, zoomMin, iterations, yRes, aspectRatio)
+    count = remapCmap(count,filter)
     image = plt.imshow(count, cmap=cmap, animated=True)
 
+    zooms = list(np.logspace(np.log(zoomMin)/np.log(1+speed), np.log(zoomMax) /
+                        np.log(1+speed), base=1+speed, num=int(duration*fps)))
+
     def update(zoom):
+        print(f" {zooms.index(zoom)+1}/{len(zooms)}",end ="\r")
         count = backends[backend](x, y, zoom, iterations, yRes, aspectRatio)
+        count = remapCmap(count,filter)
         image.set_array(count)
         return image,
 
-    zooms = np.logspace(np.log(zoomMin)/np.log(1+speed), np.log(zoomMax) /
-                        np.log(1+speed), base=1+speed, num=int(duration*fps))
-
-    return FuncAnimation(fig, update, tqdm(zooms), interval=dt, blit=True)
+    return FuncAnimation(fig, update, zooms, interval=dt, blit=True)
 
 
 cv2Available = False
