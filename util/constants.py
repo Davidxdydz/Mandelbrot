@@ -31,7 +31,7 @@ cmaps['Miscellaneous'] = [
             'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar']
 
 goodCmaps = ['inferno', 'hot', 'afmhot', 'bone', 'gray', 'Spectral', 'seismic',
-             'BrBG', 'PuOr', 'jet', 'cubehelix', 'terrain', 'brg']
+             'BrBG', 'PuOr', 'jet', 'cubehelix', 'terrain']
 
 allCmaps = plt.colormaps()
 
