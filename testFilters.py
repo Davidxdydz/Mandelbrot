@@ -10,5 +10,7 @@ filters = (
 )
 cmaps = ['afmhot', 'jet', 'hot', 'cubehelix']
 
-plotMandelbrot(*params[1], 500, cmaps=cmaps,
+plotMandelbrot(params[1], 500, cmaps=cmaps,
+               filters=filters, windowTitle="testFilters",block = False)
+plotMandelbrot(params[0], 500, cmaps=cmaps,
                filters=filters, windowTitle="testFilters")

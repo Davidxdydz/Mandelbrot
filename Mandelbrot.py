@@ -55,21 +55,25 @@ def remapCmap(image, filter=None):
     return image
 
 
-def plotImage(image, cmaps=("hot",), filters=(None,), title=None, windowTitle=None, **kwargs):
-    toPlot = list(product(cmaps, enumerate(filters)))
+def plotImage(images, cmaps=("hot",), filters=(None,), titles=(None,), windowTitle=None, **kwargs):
+    images = np.array(images)
+    titles = np.atleast_1d(titles)
+    if images.ndim == 2:
+        images = np.array([images])
+    toPlot = list(product(cmaps, enumerate(filters),images))
     sideLength = int(np.ceil(np.sqrt(len(toPlot))))
-    (height, width) = image.shape
+    (height, width) = images[0].shape
     aspectRatio = width/height
     fig, axes = plt.subplots(sideLength, sideLength, figsize=(
         aspectRatio*10, 10), squeeze=False, sharey=True, sharex=True)
-    if title:
-        fig.suptitle(title)
+    if titles:
+        fig.suptitle(titles[0])
     for xi in range(sideLength):
         for yi in range(sideLength):
             index = yi*sideLength + xi
             if index >= len(toPlot):
                 break
-            cmap, (n, filter) = toPlot[index]
+            cmap, (n, filter),image = toPlot[index]
             axes[yi, xi].imshow(remapCmap(image, filter), cmap=cmap)
             axes[yi, xi].set_title(f'"{cmap}", filter {n}')
     if windowTitle:
@@ -114,8 +118,10 @@ def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=
     plt.show(**kwargs)
 
 
-def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), title=None, subtitle=None, backend=None, filters=(None,), windowTitle=None, **kwargs):
+def plotMandelbrot(coords, yRes, aspectRatio=1, cmaps=("hot",), title=None, subtitle=None, backend=None, filters=(None,), windowTitle=None, **kwargs):
     # kwargs for plt.show(**kwargs)
+    coords = np.atleast_2d(coords)
+    x, y, zoom, iterations = coords[0]
     if backend is None:
         backend = list(backends.keys())[0]
     if not backend in backends:
@@ -128,7 +134,7 @@ def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), 
         title = f"x:{x}, y:{y}, zoom:{zoom:.2f}, {iterations} iterations ({t:.3f}s)"
     if subtitle:
         title = title + "\n" + subtitle
-    plotImage(count, cmaps, title=title, filters=filters,
+    plotImage(count, cmaps, titles=title, filters=filters,
               windowTitle=windowTitle, **kwargs)
 
 
