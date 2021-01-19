@@ -47,14 +47,16 @@ try:
 except Exception as e:
     print(e)
 
-def remapCmap(image,filter = None):
+
+def remapCmap(image, filter=None):
     if filter:
         return filter(image)
-    
+
     return image
 
-def plotImage(count, cmaps=("hot",), title=None,filters = (None,),windowTitle=None, **kwargs):
-    toPlot = list(product(cmaps,enumerate(filters)))
+
+def plotImage(count, cmaps=("hot",), title=None, filters=(None,), windowTitle=None, **kwargs):
+    toPlot = list(product(cmaps, enumerate(filters)))
     sideLength = int(np.ceil(np.sqrt(len(toPlot))))
     (height, width) = count.shape
     aspectRatio = width/height
@@ -67,14 +69,15 @@ def plotImage(count, cmaps=("hot",), title=None,filters = (None,),windowTitle=No
             index = yi*sideLength + xi
             if index >= len(toPlot):
                 break
-            cmap,(n,filter) = toPlot[index]
-            axes[yi, xi].imshow(remapCmap(count,filter), cmap=cmap)
+            cmap, (n, filter) = toPlot[index]
+            axes[yi, xi].imshow(remapCmap(count, filter), cmap=cmap)
             axes[yi, xi].set_title(f'"{cmap}", filter {n}')
     if windowTitle:
         fig.canvas.set_window_title(windowTitle)
     plt.show(**kwargs)
 
-def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=None, functions=None,filter = None,windowTitle= None, **kwargs):
+
+def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=None, functions=None, filter=None, windowTitle=None, **kwargs):
     ml = list(backends.items())
     if functions:
         ml = [(key, backends[key]) for key in functions if key in backends]
@@ -95,7 +98,7 @@ def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=
                 break
             key, f = ml[index]
             image, t = timer(f, x, y, zoom, iterations, yRes, aspectRatio)
-            image = remapCmap(image,filter)
+            image = remapCmap(image, filter)
             if index == 0:
                 prevImage = image
                 prevKey = key
@@ -111,7 +114,7 @@ def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=
     plt.show(**kwargs)
 
 
-def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), title=None, subtitle=None, backend=None,filters = (None,),windowTitle = None, **kwargs):
+def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), title=None, subtitle=None, backend=None, filters=(None,), windowTitle=None, **kwargs):
     # kwargs for plt.show(**kwargs)
     if backend is None:
         backend = list(backends.keys())[0]
@@ -125,10 +128,11 @@ def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), 
         title = f"x:{x}, y:{y}, zoom:{zoom:.2f}, {iterations} iterations ({t:.3f}s)"
     if subtitle:
         title = title + "\n" + subtitle
-    plotImage(count, cmaps, title,filters=filters,windowTitle=windowTitle, **kwargs)
+    plotImage(count, cmaps, title, filters=filters,
+              windowTitle=windowTitle, **kwargs)
 
 
-def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="afmhot", speed=0.1, fps=2, duration=5, backend=None,filter = None):
+def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="afmhot", speed=0.1, fps=2, duration=5, backend=None, filter=None):
 
     if backend is None:
         backend = list(backends.keys())[0]
@@ -144,16 +148,16 @@ def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="a
     dt = 1/fps * 1000  # in ms
 
     count = backends[backend](x, y, zoomMin, iterations, yRes, aspectRatio)
-    count = remapCmap(count,filter)
+    count = remapCmap(count, filter)
     image = plt.imshow(count, cmap=cmap, animated=True)
 
     zooms = list(np.logspace(np.log(zoomMin)/np.log(1+speed), np.log(zoomMax) /
-                        np.log(1+speed), base=1+speed, num=int(duration*fps)))
+                             np.log(1+speed), base=1+speed, num=int(duration*fps)))
 
     def update(zoom):
-        print(f" {zooms.index(zoom)+1}/{len(zooms)}",end ="\r")
+        print(f" {zooms.index(zoom)+1}/{len(zooms)}", end="\r")
         count = backends[backend](x, y, zoom, iterations, yRes, aspectRatio)
-        count = remapCmap(count,filter)
+        count = remapCmap(count, filter)
         image.set_array(count)
         return image,
 
