@@ -1,5 +1,4 @@
 from itertools import product
-from google.protobuf import message
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
