@@ -33,6 +33,7 @@ optional:
 ### State
 Nothing is documented, maybe I'll do this one day 
 
-Might work in jupyter/ colab 
-Mandelbrot.ipynb works in colab, but is an old version. 
+
+Might work in jupyter/ colab \ 
+Mandelbrot.ipynb works in colab, but is an old version. \ 
 Enable GPU in google colab by changing runtime type to GPU
