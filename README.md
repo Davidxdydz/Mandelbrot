@@ -6,7 +6,8 @@ fast and easy to use mandelbrot renderings and animations in python
 ### Usage
 most functions have their own `test*.py` file
 
-testAll.py executes all test files.
+testAll.py executes all test files.  
+For the first test, many windows pop up and matplotlib is a bit slow, so be patient. The tests only continue once all windows have been closed.
 
 
 ### Backends
