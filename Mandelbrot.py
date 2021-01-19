@@ -55,10 +55,10 @@ def remapCmap(image, filter=None):
     return image
 
 
-def plotImage(count, cmaps=("hot",), title=None, filters=(None,), windowTitle=None, **kwargs):
+def plotImage(image, cmaps=("hot",), filters=(None,), title=None, windowTitle=None, **kwargs):
     toPlot = list(product(cmaps, enumerate(filters)))
     sideLength = int(np.ceil(np.sqrt(len(toPlot))))
-    (height, width) = count.shape
+    (height, width) = image.shape
     aspectRatio = width/height
     fig, axes = plt.subplots(sideLength, sideLength, figsize=(
         aspectRatio*10, 10), squeeze=False, sharey=True, sharex=True)
@@ -70,7 +70,7 @@ def plotImage(count, cmaps=("hot",), title=None, filters=(None,), windowTitle=No
             if index >= len(toPlot):
                 break
             cmap, (n, filter) = toPlot[index]
-            axes[yi, xi].imshow(remapCmap(count, filter), cmap=cmap)
+            axes[yi, xi].imshow(remapCmap(image, filter), cmap=cmap)
             axes[yi, xi].set_title(f'"{cmap}", filter {n}')
     if windowTitle:
         fig.canvas.set_window_title(windowTitle)
@@ -128,7 +128,7 @@ def plotMandelbrot(x, y, zoom, iterations, yRes, aspectRatio=1, cmaps=("hot",), 
         title = f"x:{x}, y:{y}, zoom:{zoom:.2f}, {iterations} iterations ({t:.3f}s)"
     if subtitle:
         title = title + "\n" + subtitle
-    plotImage(count, cmaps, title, filters=filters,
+    plotImage(count, cmaps, title=title, filters=filters,
               windowTitle=windowTitle, **kwargs)
 
 
@@ -161,6 +161,7 @@ def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="a
         image.set_array(count)
         return image,
 
+    # TODO: tqdm on zooms is broken?? remove print from update
     return FuncAnimation(fig, update, zooms, interval=dt, blit=True)
 
 
@@ -172,6 +173,7 @@ except Exception as e:
     print(e)
 
 
+import copy
 def animateZoomCv2(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="afmhot", speed=0.1, fps=30, duration=10, backend=None):
     if not cv2Available:
         print("cv2 not imported")
@@ -183,7 +185,7 @@ def animateZoomCv2(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap
             f'"{backend}" not found, available backends:{",".join(backends.keys())}')
         return
     dt = 1/fps * 1000
-    cmap = cm.get_cmap(cmap)
+    cmap = copy.copy(cm.get_cmap(cmap))
     # force to return bgr instead of rgba
     cmap._init()
     cmap._lut = cmap._lut[..., [2, 1, 0]]
@@ -213,6 +215,7 @@ def animateZoomCv2(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap
         if cv2.waitKey(wait) & 0xff == ord('q'):
             break
         i = (i+1) % frames
+    cv2.destroyAllWindows()
 
 
 def forceCompile(output=False):
