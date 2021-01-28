@@ -10,9 +10,22 @@ from collections import OrderedDict
 
 backends = OrderedDict()
 
+
+try:
+    import methods.CUDADouble
+    backends['cudaD'] = methods.CUDADouble.mandelbrot
+except Exception as e:
+    print(e)
+
 try:
     import methods.CUDA
     backends['cuda'] = methods.CUDA.mandelbrot
+except Exception as e:
+    print(e)
+
+try:
+    import methods.NumbaDouble
+    backends['numbaD'] = methods.NumbaDouble.mandelbrot
 except Exception as e:
     print(e)
 
@@ -21,6 +34,7 @@ try:
     backends['numba'] = methods.Numba.mandelbrot
 except Exception as e:
     print(e)
+
 
 try:
     import methods.Tensorflow
@@ -53,6 +67,17 @@ def remapCmap(image, filter=None):
 
     return image
 
+def getFunction(backend = None):
+    if backend is None:
+        backend = list(backends.keys())[0]
+    if not backend in backends:
+        print(f'"{backend}" not found, available backends:{",".join(backends.keys())}')
+        backend = list(backends.keys())[0]
+        print(f"fallback to {backend}")
+    return backends[backend]
+
+def getImage(x, y, zoom, iterations,yRes, aspectRatio=1,filter = None,backend = None):
+    return remapCmap(getFunction(backend = backend)(x, y, zoom, iterations,yRes, aspectRatio=aspectRatio),filter= filter)
 
 def plotImage(images, cmaps=("hot",), filters=(None,), titles=(None,), windowTitle=None, **kwargs):
     images = np.array(images)
@@ -81,12 +106,11 @@ def plotImage(images, cmaps=("hot",), filters=(None,), titles=(None,), windowTit
 
 
 def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=None, functions=None, filter=None, windowTitle=None, **kwargs):
-    ml = list(backends.items())
-    if functions:
-        ml = [(key, backends[key]) for key in functions if key in backends]
+    if not functions:
+        functions = list(backends.keys())
     prevImage = None
     prevKey = ""
-    sideLength = int(np.ceil(np.sqrt(len(ml))))
+    sideLength = int(np.ceil(np.sqrt(len(functions))))
     fig, axes = plt.subplots(sideLength, sideLength, figsize=(
         aspectRatio*10, 10), squeeze=False, sharey=True, sharex=True)
     if title:
@@ -97,11 +121,10 @@ def testBackends(x, y, zoom, iterations, yRes, aspectRatio=1, cmap='hot', title=
     for xi in range(sideLength):
         for yi in range(sideLength):
             index = yi*sideLength + xi
-            if index >= len(ml):
+            if index >= len(functions):
                 break
-            key, f = ml[index]
-            image, t = timer(f, x, y, zoom, iterations, yRes, aspectRatio)
-            image = remapCmap(image, filter)
+            key = functions[index]
+            image, t = timer(getImage, x, y, zoom, iterations, yRes, aspectRatio,backend = key,filter = filter)
             if index == 0:
                 prevImage = image
                 prevKey = key
@@ -121,14 +144,8 @@ def plotMandelbrot(coords, yRes, aspectRatio=1, cmaps=("hot",), title=None, subt
     # kwargs for plt.show(**kwargs)
     coords = np.atleast_2d(coords)
     x, y, zoom, iterations = coords[0]
-    if backend is None:
-        backend = list(backends.keys())[0]
-    if not backend in backends:
-        print(
-            f'"{backend}" not found, available backends:{",".join(backends.keys())}')
-        return
-    count, t = timer(backends[backend], x, y, zoom,
-                     iterations, yRes, aspectRatio)
+    count, t = timer(getImage, x, y, zoom,
+                     iterations, yRes, aspectRatio,backend= backend)
     if not title:
         title = f"x:{x}, y:{y}, zoom:{zoom:.2f}, {iterations} iterations ({t:.3f}s)"
     if subtitle:
@@ -138,22 +155,13 @@ def plotMandelbrot(coords, yRes, aspectRatio=1, cmaps=("hot",), title=None, subt
 
 
 def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="afmhot", speed=0.1, fps=2, duration=5, backend=None, filter=None):
-
-    if backend is None:
-        backend = list(backends.keys())[0]
-
-    if not backend in backends:
-        print(
-            f'"{backend}" not found, available backends:{",".join(backends.keys())}')
-        return
     fig = plt.figure(figsize=(int(aspectRatio*10), 10))
     plt.tight_layout()
     plt.axis("off")
     plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
     dt = 1/fps * 1000  # in ms
 
-    count = backends[backend](x, y, zoomMin, iterations, yRes, aspectRatio)
-    count = remapCmap(count, filter)
+    count = getImage(x, y, zoomMin, iterations, yRes, aspectRatio,backend=backend,filter = filter)
     image = plt.imshow(count, cmap=cmap, animated=True)
 
     zooms = list(np.logspace(np.log(zoomMin)/np.log(1+speed), np.log(zoomMax) /
@@ -161,13 +169,36 @@ def animateZoom(x, y, zoomMin, zoomMax, iterations, yRes, aspectRatio=1, cmap="a
 
     def update(zoom):
         print(f" {zooms.index(zoom)+1}/{len(zooms)}", end="\r")
-        count = backends[backend](x, y, zoom, iterations, yRes, aspectRatio)
-        count = remapCmap(count, filter)
+        count = getImage(x, y, zoom, iterations, yRes, aspectRatio,backend=backend,filter = filter)
         image.set_array(count)
         return image,
 
     # TODO: tqdm on zooms is broken?? remove print from update
     return FuncAnimation(fig, update, zooms, interval=dt, blit=True)
+
+def interactive(cmap = "hot",backend = None):
+    yRes = 1000
+    iterations = 10000
+    plt.figure()
+    ax = plt.gca()
+    def getImageByBounds(minX,maxX,minY,maxY):
+        x = (minX+maxX)/2
+        y = (minY + maxY)/2
+        width = maxX-minX
+        height = maxY-minY
+        zoom = 1/(maxY-y)
+        aspectRatio = width/height
+        return getImage(x,y,zoom,iterations,yRes,aspectRatio,backend=backend)
+    image = ax.imshow(getImageByBounds(-2,1,-1.5,1.5),extent = (-2,1,-1.5,1.5),cmap = cmap,origin = "top")
+    def on_ylims_change(axes):
+        xmin,xmax = axes.get_xlim()
+        ymin,ymax = axes.get_ylim()
+        im = getImageByBounds(xmin,xmax,ymin,ymax)
+        image.set_array(im)
+        image.set_extent((xmin,xmax,ymin,ymax))
+    ax.callbacks.connect('ylim_changed', on_ylims_change)
+    plt.show()
+
 
 
 cv2Available = False
