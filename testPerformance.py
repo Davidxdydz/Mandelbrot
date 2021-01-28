@@ -5,7 +5,7 @@ from util.timer import timer
 import matplotlib.pyplot as plt
 from util.constants import params
 
-ress = np.logspace(1, 3, base=10, num=30)
+ress = np.logspace(1, 3.5, base=10, num=40)
 times = {key: [] for key in backends.keys()}
 
 forceCompile()
