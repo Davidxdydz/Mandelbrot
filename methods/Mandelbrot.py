@@ -22,6 +22,7 @@ class Mandelbrot:
             return super().__new__(next(iter(backends.values())))
         else:
             raise ValueError(f"Backend {backend} not found")
+        
 
     @staticmethod
     def load_available_backends() -> OrderedDict:
@@ -137,17 +138,19 @@ class Mandelbrot:
         bounds = (-2.0, 1, -1.5, 1.5)
         image = ax.imshow(np.flip(self.iterations_by_bounds(*bounds), 0),
                           extent=bounds, cmap="hot", origin="upper")
-
+        title = plt.title(f"{self.__class__.__name__}, {self.max_iterations} iterations")
         def on_ylims_change(axes):
             nonlocal bounds
             x_min, x_max = axes.get_xlim()
             y_min, y_max = axes.get_ylim()
             new_bounds = (x_min, x_max, y_min, y_max)
+            print(f"zoom = {1/(x_max-x_min)}")
             if new_bounds == bounds:
                 return
             bounds = new_bounds
             im = np.flip(self.iterations_by_bounds(*bounds), 0)
             image.set_array(im)
             image.set_extent(bounds)
+            title.set_text(f"{self.__class__.__name__}, {self.max_iterations} iterations")
         ax.callbacks.connect('ylim_changed', on_ylims_change)
         plt.show()
