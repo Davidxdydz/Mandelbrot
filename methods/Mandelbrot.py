@@ -154,7 +154,6 @@ class Mandelbrot:
             x_min, x_max = axes.get_xlim()
             y_min, y_max = axes.get_ylim()
             new_bounds = (x_min, x_max, y_min, y_max)
-            print(f"zoom = {1/(x_max-x_min)}")
             if new_bounds == bounds:
                 return
             bounds = new_bounds
