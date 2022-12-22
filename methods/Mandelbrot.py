@@ -140,16 +140,16 @@ class Mandelbrot:
         """
         return self.iterations(x, y, zoom)
 
-    def interactive(self):
+    def interactive(self, cmap = "hot"):
         ax: plt.Axes = plt.gca()
         bounds = (-2.0, 1, -1.5, 1.5)
         im, t = self.timed_by_bounds(*bounds)
         image = ax.imshow(np.flip(im, 0),
-                          extent=bounds, cmap="hot", origin="upper")
+                          extent=bounds, cmap=cmap, origin="upper")
         title = plt.title(
             f"{self.__class__.__name__}, {self.max_iterations} iterations in {t}")
 
-        def on_ylims_change(axes):
+        def on_ylims_change(axes: plt.Axes):
             nonlocal bounds
             x_min, x_max = axes.get_xlim()
             y_min, y_max = axes.get_ylim()
