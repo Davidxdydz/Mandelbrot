@@ -3,6 +3,8 @@ from collections import OrderedDict
 import logging
 import matplotlib.pyplot as plt
 from typing import Tuple
+import time
+import datetime
 
 
 class Mandelbrot:
@@ -22,7 +24,6 @@ class Mandelbrot:
             return super().__new__(next(iter(backends.values())))
         else:
             raise ValueError(f"Backend {backend} not found")
-        
 
     @staticmethod
     def load_available_backends() -> OrderedDict:
@@ -103,7 +104,13 @@ class Mandelbrot:
         width = int(self.height * aspect_ratio)
         return width, int(self.height)
 
-    def iterations_by_bounds(x_min: float, x_max: float, y_min: float, y_max: float) -> np.ndarray:
+    def timed_by_bounds(self, x_min: float, x_max: float, y_min: float, y_max: float) -> Tuple[np.ndarray, datetime.timedelta]:
+        start = time.perf_counter()
+        result = self.iterations_by_bounds(x_min, x_max, y_min, y_max)
+        end = time.perf_counter()
+        return result, datetime.timedelta(seconds=end-start)
+
+    def iterations_by_bounds(self, x_min: float, x_max: float, y_min: float, y_max: float) -> np.ndarray:
         """
         Calculate number of iterations needed for points around (`x`,`y`) to diverge. 
 
@@ -136,9 +143,12 @@ class Mandelbrot:
     def interactive(self):
         ax: plt.Axes = plt.gca()
         bounds = (-2.0, 1, -1.5, 1.5)
-        image = ax.imshow(np.flip(self.iterations_by_bounds(*bounds), 0),
+        im, t = self.timed_by_bounds(*bounds)
+        image = ax.imshow(np.flip(im, 0),
                           extent=bounds, cmap="hot", origin="upper")
-        title = plt.title(f"{self.__class__.__name__}, {self.max_iterations} iterations")
+        title = plt.title(
+            f"{self.__class__.__name__}, {self.max_iterations} iterations in {t}")
+
         def on_ylims_change(axes):
             nonlocal bounds
             x_min, x_max = axes.get_xlim()
@@ -148,9 +158,10 @@ class Mandelbrot:
             if new_bounds == bounds:
                 return
             bounds = new_bounds
-            im = np.flip(self.iterations_by_bounds(*bounds), 0)
-            image.set_array(im)
+            im, t = self.timed_by_bounds(*bounds)
+            image.set_array(np.flip(im, 0))
             image.set_extent(bounds)
-            title.set_text(f"{self.__class__.__name__}, {self.max_iterations} iterations")
+            title.set_text(
+                f"{self.__class__.__name__}, {self.max_iterations} iterations in {t}")
         ax.callbacks.connect('ylim_changed', on_ylims_change)
         plt.show()
